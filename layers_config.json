@@ -1,0 +1,31 @@
+{
+  "version": "2.0",
+  "basemaps": [
+    { "id": "osm",        "name": "OpenStreetMap",        "icon": "🗺", "default": true,
+      "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "attribution": "© OpenStreetMap contributors", "maxZoom": 19 },
+    { "id": "satellite",  "name": "Esri World Imagery",   "icon": "🛰",
+      "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      "attribution": "© Esri, Maxar, GeoEye", "maxZoom": 19 },
+    { "id": "topo",       "name": "OpenTopoMap",          "icon": "⛰",
+      "url": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      "attribution": "© OpenTopoMap, SRTM", "maxZoom": 17 },
+    { "id": "dark",       "name": "CartoDB Dark",         "icon": "🌑",
+      "url": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      "attribution": "© CARTO, OSM", "maxZoom": 19 },
+    { "id": "hillshade",  "name": "Esri World Hillshade", "icon": "🏔",
+      "url": "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
+      "attribution": "© Esri", "maxZoom": 16 }
+  ],
+  "overlays": [
+    { "id": "esri_worldcover", "name": "ESA WorldCover (10m)", "icon": "🌍", "category": "Land Cover", "source": "ESA Copernicus", "type": "tile", "opacity": 0.75,
+      "url": "https://services.terrascope.be/wmts/v2?layer=WORLDCOVER_2021_MAP&style=default&tilematrixset=EPSG:3857&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix={z}&TileCol={x}&TileRow={y}" },
+    { "id": "stamen_terrain_bg", "name": "Stadia Terrain", "icon": "🏞", "category": "Terrain", "source": "Stadia Maps", "type": "tile", "opacity": 0.6,
+      "url": "https://tiles.stadiamaps.com/tiles/stamen_terrain_background/{z}/{x}/{y}{r}.png" },
+    { "id": "esri_topo_wm", "name": "Esri Topo", "icon": "📐", "category": "Terrain", "source": "Esri", "type": "tile", "opacity": 0.6,
+      "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}" },
+    { "id": "nfz_local", "name": "NFZ Zones (Local)", "icon": "🚫", "category": "Airspace", "source": "AeroGIS", "type": "geojson_local", "file": "data/nfz_east_africa.geojson", "color": "#f87171" },
+    { "id": "osm_transport", "name": "Transport Lines", "icon": "🛣", "category": "Infrastructure", "source": "OpenRailwayMap", "type": "tile", "opacity": 0.7,
+      "url": "https://a.tile.openrailwaymap.org/standard/{z}/{x}/{y}.png" }
+  ]
+}

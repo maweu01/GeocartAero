@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<!--
+  Dynamic base tag:
+  • GitHub Pages: auto-detects /<repo-name>/ from pathname
+  • Local file:// or localhost: uses "./" relative base
+  ALL asset paths below are RELATIVE — no leading slashes.
+-->
+<script>
+(function(){
+  var b=document.createElement('base');
+  var h=location.hostname;
+  if(h.endsWith('.github.io')){
+    var p=location.pathname.split('/');
+    b.href='/'+p[1]+'/';
+  } else {
+    b.href='./';
+  }
+  document.head.insertBefore(b,document.head.firstChild||null);
+})();
+</script>
+<title>AeroGIS Pro v5 — Aerial Survey Intelligence Platform</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════ TOP BAR ══════════════════════ -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-logomark">✈</div>
+    <div class="tb-title">
+      <div class="tb-name">AeroGIS <em>Pro</em></div>
+      <div class="tb-sub">Aerial Survey Intelligence v5</div>
+    </div>
+  </div>
+
+  <nav class="tb-nav" id="main-nav">
+    <div class="tn on" data-mod="planner"  onclick="switchMod('planner')">
+      <svg viewBox="0 0 16 16"><path d="M8 1L2 5v9h4V9h4v5h4V5L8 1z" fill="currentColor"/></svg><span>Flight Planner</span></div>
+    <div class="tn" data-mod="assessment" onclick="switchMod('assessment')">
+      <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.5"/></svg><span>Site Assessment</span></div>
+    <div class="tn" data-mod="change"     onclick="switchMod('change')">
+      <svg viewBox="0 0 16 16"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Change Detection</span></div>
+    <div class="tn" data-mod="nfz"        onclick="switchMod('nfz')">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M4 4l8 8" stroke="currentColor" stroke-width="1.5"/></svg><span>No Flight Zones</span></div>
+    <div class="tn" data-mod="log"        onclick="switchMod('log')">
+      <svg viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M6 6h4M6 9h4M6 12h2" stroke="currentColor" stroke-width="1"/></svg><span>Drone Log</span></div>
+    <div class="tn" data-mod="connect"    onclick="switchMod('connect')">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2" fill="currentColor"/><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Connect</span></div>
+    <div class="tn" data-mod="export"     onclick="switchMod('export')">
+      <svg viewBox="0 0 16 16"><path d="M8 2v9M4 7l4 5 4-5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.5"/></svg><span>Export</span></div>
+  </nav>
+
+  <div class="tb-right">
+    <div class="chip g"><div class="blink"></div>GPS</div>
+    <div class="chip b" id="chip-sat">12 SAT</div>
+    <div class="chip a" id="chip-nfz">NFZ</div>
+    <span class="utc" id="utc-clock">--:--:-- UTC</span>
+    <span class="tb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">☰</span>
+  </div>
+</header>
+
+<!-- ══════════════════════ APP ══════════════════════ -->
+<div class="app">
+
+  <!-- ══ LEFT SIDEBAR ══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="stabs" id="stabs">
+      <!-- Generated dynamically per active module -->
+    </div>
+    <div class="sbody" id="sbody">
+
+      <!-- ─── FLIGHT PLANNER ─── -->
+      <div class="panel on" id="p-planner">
+        <div class="sh">AOI Shape</div>
+        <div class="shape-grid" id="shape-grid">
+          <div class="shbtn on" data-shape="rectangle" onclick="selectShape('rectangle')"><span class="sh-ico">⬜</span>Rectangle</div>
+          <div class="shbtn" data-shape="polygon"   onclick="selectShape('polygon')">  <span class="sh-ico">🔷</span>Polygon</div>
+          <div class="shbtn" data-shape="circle"    onclick="selectShape('circle')">   <span class="sh-ico">⭕</span>Circle</div>
+          <div class="shbtn" data-shape="corridor"  onclick="selectShape('corridor')"> <span class="sh-ico">➡</span>Corridor</div>
+          <div class="shbtn" data-shape="triangle"  onclick="selectShape('triangle')"> <span class="sh-ico">🔺</span>Triangle</div>
+          <div class="shbtn" data-shape="custom"    onclick="selectShape('custom')">   <span class="sh-ico">✏️</span>Custom</div>
+        </div>
+
+        <div class="sh">Platform & Sensor</div>
+        <div class="fg">
+          <label>Aircraft Platform</label>
+          <select id="fp-aircraft" onchange="onAircraftChange()">
+            <option value="">— Select Platform —</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Camera / Sensor</label>
+          <select id="fp-sensor" onchange="onSensorChange()">
+            <option value="">— Select Sensor —</option>
+          </select>
+        </div>
+
+        <div class="sh">Flight Parameters</div>
+        <div class="fg">
+          <label>Altitude AGL (m)</label>
+          <div class="slw">
+            <input type="range" id="fp-alt" min="10" max="500" value="120" oninput="sv('fp-alt','m');calcFlight()"/>
+            <span class="sv" id="fp-alt-v">120m</span>
+          </div>
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Side Overlap %</label>
+            <div class="slw">
+              <input type="range" id="fp-sovl" min="40" max="95" value="70" oninput="sv('fp-sovl','%');calcFlight()"/>
+              <span class="sv" id="fp-sovl-v">70%</span>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Forward Overlap %</label>
+            <div class="slw">
+              <input type="range" id="fp-fovl" min="40" max="95" value="80" oninput="sv('fp-fovl','%');calcFlight()"/>
+              <span class="sv" id="fp-fovl-v">80%</span>
+            </div>
+          </div>
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Focal Length (mm)</label>
+            <input type="number" id="fp-focal" value="35" min="8" max="200" oninput="calcFlight()"/>
+          </div>
+          <div class="fg">
+            <label>Sensor Width (mm)</label>
+            <input type="number" id="fp-sensw" value="35.9" min="5" max="60" step="0.1" oninput="calcFlight()"/>
+          </div>
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Wind Direction (°)</label>
+            <div class="slw">
+              <input type="range" id="fp-wind" min="0" max="315" step="45" value="0" oninput="sv('fp-wind','°')"/>
+              <span class="sv" id="fp-wind-v">0°</span>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Flight Speed (m/s)</label>
+            <input type="number" id="fp-speed" value="10" min="1" max="40" oninput="calcFlight()"/>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Mission Name</label>
+          <input type="text" id="fp-name" value="Survey_Mission_001"/>
+        </div>
+
+        <div class="brow">
+          <button class="btn ne fw" onclick="generateFlightPlan()">⚡ Generate Flight Plan</button>
+          <div class="brow2">
+            <button class="btn ot" onclick="clearPlan()">🗑 Clear</button>
+            <button class="btn te" onclick="openModal('coord')">📍 Coordinates</button>
+          </div>
+          <button class="btn ot fw sm" onclick="fetchWeather()">🌤 Get Weather at AOI</button>
+        </div>
+
+        <!-- Mission summary -->
+        <div id="ms-box" class="result-box" style="display:none">
+          <div class="rh">📊 Mission Summary</div>
+          <div class="dc-grid" id="ms-top"></div>
+          <div class="dc-grid dc-grid3" id="ms-bot" style="margin-top:5px"></div>
+          <div id="ms-note" style="font-size:9.5px;color:var(--txt3);margin-top:6px"></div>
+          <div id="ms-nfz-warn" style="display:none;margin-top:8px;padding:7px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:5px;font-size:10px;color:var(--red)"></div>
+          <div class="brow3" style="margin-top:8px">
+            <button class="btn gn xs" onclick="xGeoJSON()">⬇ GeoJSON</button>
+            <button class="btn am xs" onclick="xKML()">⬇ KML</button>
+            <button class="btn te xs" onclick="xCSV()">⬇ CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SITE ASSESSMENT ─── -->
+      <div class="panel" id="p-assessment">
+        <div class="sh">Assessment Type</div>
+        <div class="cd-grid" id="assess-grid">
+          <div class="cd-btn on" data-type="realEstate" onclick="selAssess('realEstate')"><span class="cd-ico">🏗</span>Real Estate</div>
+          <div class="cd-btn" data-type="urban"     onclick="selAssess('urban')">    <span class="cd-ico">🏙</span>Urban Planning</div>
+          <div class="cd-btn" data-type="solar"     onclick="selAssess('solar')">    <span class="cd-ico">☀</span>Solar Energy</div>
+          <div class="cd-btn" data-type="flood"     onclick="selAssess('flood')">    <span class="cd-ico">🌊</span>Flood Risk</div>
+          <div class="cd-btn" data-type="agri"      onclick="selAssess('agri')">     <span class="cd-ico">🌾</span>Agriculture</div>
+          <div class="cd-btn" data-type="infra"     onclick="selAssess('infra')">    <span class="cd-ico">🏗</span>Infrastructure</div>
+        </div>
+        <div class="sh">Parameters</div>
+        <div class="fg">
+          <label>Site Name</label>
+          <input type="text" id="sa-name" value="Study Area Alpha"/>
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Area (ha)</label>
+            <input type="number" id="sa-area" value="50" min="0.1" step="0.1"/>
+          </div>
+          <div class="fg">
+            <label>Region</label>
+            <select id="sa-region">
+              <option>Nairobi Metro</option>
+              <option>Mombasa Coast</option>
+              <option>Kisumu Lakeside</option>
+              <option>Nakuru Rift Valley</option>
+              <option>Custom Region</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn ne fw" onclick="runAssessment()">📊 Run Site Assessment</button>
+        <div id="assess-result" class="result-box" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <!-- ─── CHANGE DETECTION ─── -->
+      <div class="panel" id="p-change">
+        <div class="sh">Detection Type</div>
+        <div class="cd-grid" id="cd-grid">
+          <div class="cd-btn on" data-type="landuse"  onclick="selCD('landuse')">  <span class="cd-ico">🗺</span>Land Use</div>
+          <div class="cd-btn" data-type="deforest"    onclick="selCD('deforest')"> <span class="cd-ico">🌳</span>Deforestation</div>
+          <div class="cd-btn" data-type="mining"      onclick="selCD('mining')">   <span class="cd-ico">⛏</span>Mining</div>
+          <div class="cd-btn" data-type="flood"       onclick="selCD('flood')">    <span class="cd-ico">🌊</span>Flood</div>
+          <div class="cd-btn" data-type="urban"       onclick="selCD('urban')">    <span class="cd-ico">🏙</span>Urban Growth</div>
+          <div class="cd-btn" data-type="lidar"       onclick="selCD('lidar')">    <span class="cd-ico">📡</span>Bathymetric</div>
+        </div>
+        <div class="sh">Time Period</div>
+        <div class="fg-row">
+          <div class="fg"><label>Start Date</label><input type="date" id="cd-t1" value="2024-01-01"/></div>
+          <div class="fg"><label>End Date</label><input type="date" id="cd-t2" value="2026-03-01"/></div>
+        </div>
+        <div class="fg">
+          <label>Satellite Source</label>
+          <select id="cd-src">
+            <option value="s2">Sentinel-2 (10m)</option>
+            <option value="l8">Landsat 8 (30m)</option>
+            <option value="planet">Planet (3m)</option>
+            <option value="sar">Sentinel-1 SAR</option>
+          </select>
+        </div>
+        <button class="btn ne fw" onclick="runCD()">🔄 Run Change Detection</button>
+        <div id="cd-result" class="result-box" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <!-- ─── NO FLIGHT ZONES ─── -->
+      <div class="panel" id="p-nfz">
+        <div class="sh">Airspace Database</div>
+        <div class="brow2" style="margin-bottom:10px">
+          <button class="btn ot sm" onclick="toggleNFZ(true)">👁 Show All</button>
+          <button class="btn ot sm" onclick="toggleNFZ(false)">🚫 Hide All</button>
+        </div>
+        <div id="nfz-list"></div>
+        <div class="sh" style="margin-top:12px">Airport Buffer</div>
+        <div class="fg">
+          <label>Buffer Radius (km)</label>
+          <div class="slw">
+            <input type="range" id="nfz-buf" min="1" max="20" value="8" oninput="sv('nfz-buf','km');renderNFZ()"/>
+            <span class="sv" id="nfz-buf-v">8km</span>
+          </div>
+        </div>
+        <div style="padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-size:9.5px;color:var(--txt3);margin-top:4px">
+          ⚠ Always verify with KCAA NOTAMs. This database is for planning purposes only.
+        </div>
+        <div class="sh" style="margin-top:12px">Flight Tracker</div>
+        <div class="brow">
+          <button class="btn ne fw sm" onclick="openFR24()">🛩 Open FlightRadar24</button>
+          <button class="btn ot fw sm" onclick="openADSB()">📡 Open ADSB.lol</button>
+          <button class="btn ot fw sm" onclick="loadSimTraffic()">🎲 Demo Traffic</button>
+        </div>
+        <div id="tracker-list" style="margin-top:8px"></div>
+      </div>
+
+      <!-- ─── DRONE LOG ─── -->
+      <div class="panel" id="p-log">
+        <div class="sh">Add Mission Log</div>
+        <div class="fg-row">
+          <div class="fg"><label>Date</label><input type="date" id="log-date"/></div>
+          <div class="fg"><label>Platform</label>
+            <select id="log-plat">
+              <option>DJI M350 RTK</option><option>DJI M300 RTK</option>
+              <option>Phantom 4 RTK</option><option>WingtraOne</option>
+              <option>eBee X</option><option>Cessna 208</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg"><label>Survey Site</label><input type="text" id="log-site" placeholder="e.g. Nairobi CBD Block 4A"/></div>
+        <div class="fg-row">
+          <div class="fg"><label>Duration (min)</label><input type="number" id="log-dur" value="45"/></div>
+          <div class="fg"><label>Images</label><input type="number" id="log-imgs" value="840"/></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>Coverage (ha)</label><input type="number" id="log-cov" value="50" step="0.1"/></div>
+          <div class="fg"><label>Battery Used %</label><input type="number" id="log-batt" value="80" max="100"/></div>
+        </div>
+        <div class="fg"><label>Status</label>
+          <select id="log-status">
+            <option value="complete">✅ Complete</option>
+            <option value="partial">⚠ Partial</option>
+            <option value="aborted">❌ Aborted</option>
+          </select>
+        </div>
+        <div class="fg"><label>Notes</label><textarea id="log-notes" placeholder="Weather, issues, observations..."></textarea></div>
+        <div class="brow3" style="margin-bottom:10px">
+          <button class="btn ne" onclick="addLog()">➕ Add</button>
+          <button class="btn te" onclick="importLogCSV()">⬆ Import</button>
+          <button class="btn gn" onclick="exportLogCSV()">⬇ Export</button>
+        </div>
+        <input type="file" id="log-file" accept=".csv,.json" style="display:none" onchange="handleLogImport(event)"/>
+        <div id="log-table-wrap" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- ─── CONNECT ─── -->
+      <div class="panel" id="p-connect">
+        <div class="sh">Connection</div>
+        <div class="fg"><label>Method</label>
+          <select id="conn-method" onchange="onConnMethod()">
+            <option value="ble">Web Bluetooth (BLE)</option>
+            <option value="wifi">Wi-Fi UDP</option>
+            <option value="mavlink">MAVLink TCP</option>
+            <option value="usb">USB Serial</option>
+          </select>
+        </div>
+        <div class="fg fg-row" id="conn-ip-row" style="display:none">
+          <div class="fg"><label>Host IP</label><input type="text" id="conn-ip" value="192.168.1.1"/></div>
+          <div class="fg"><label>Port</label><input type="number" id="conn-port" value="14550"/></div>
+        </div>
+        <div class="brow">
+          <button class="btn ne fw" onclick="connectAircraft()">🔗 Connect</button>
+          <button class="btn rd fw sm" onclick="disconnectAircraft()">✕ Disconnect</button>
+        </div>
+        <div id="conn-status" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-size:10.5px;color:var(--txt3);margin-top:8px">
+          ○ Not connected
+        </div>
+        <div class="sh" style="margin-top:12px">Live Telemetry</div>
+        <div class="tgrid" id="telem-gauges">
+          <div class="gauge"><div class="g-val" id="g-alt">0</div><div class="g-unit">m AGL</div><div class="g-lbl">Altitude</div></div>
+          <div class="gauge"><div class="g-val" id="g-spd">0</div><div class="g-unit">m/s</div><div class="g-lbl">Speed</div></div>
+          <div class="gauge hi"><div class="g-val" id="g-bat">100</div><div class="g-unit">%</div><div class="g-lbl">Battery</div></div>
+          <div class="gauge"><div class="g-val" id="g-hdg">0</div><div class="g-unit">°</div><div class="g-lbl">Heading</div></div>
+          <div class="gauge"><div class="g-val" id="g-sig">0</div><div class="g-unit">%</div><div class="g-lbl">Signal</div></div>
+          <div class="gauge"><div class="g-val" id="g-dst">0</div><div class="g-unit">m</div><div class="g-lbl">Distance</div></div>
+        </div>
+        <canvas id="telem-chart" style="width:100%;display:block;margin-top:6px" height="90"></canvas>
+        <div class="brow" style="margin-top:8px">
+          <button class="btn te fw sm" onclick="startDemo()">▶ Demo Flight Mode</button>
+          <button class="btn ot fw sm" onclick="stopDemo()">⏹ Stop Demo</button>
+        </div>
+      </div>
+
+      <!-- ─── EXPORT ─── -->
+      <div class="panel" id="p-export">
+        <div class="sh">Flight Plan Exports</div>
+        <div class="ex-grid" style="margin-bottom:12px">
+          <div class="ex-btn" onclick="xGeoJSON()"><span class="ex-ico">📄</span><span class="ex-name">GeoJSON</span><span class="ex-desc">QGIS / ArcGIS</span></div>
+          <div class="ex-btn" onclick="xKML()"><span class="ex-ico">🌐</span><span class="ex-name">KML</span><span class="ex-desc">Google Earth</span></div>
+          <div class="ex-btn" onclick="xCSV()"><span class="ex-ico">📊</span><span class="ex-name">CSV</span><span class="ex-desc">Waypoints</span></div>
+          <div class="ex-btn" onclick="xMissionPlanner()"><span class="ex-ico">🎯</span><span class="ex-name">Mission Planner</span><span class="ex-desc">.waypoints</span></div>
+          <div class="ex-btn" onclick="xDJI()"><span class="ex-ico">✈</span><span class="ex-name">DJI Pilot 2</span><span class="ex-desc">DJI .json</span></div>
+          <div class="ex-btn" onclick="xGPX()"><span class="ex-ico">🗺</span><span class="ex-name">GPX</span><span class="ex-desc">GPS Track</span></div>
+        </div>
+        <div class="sh">Reports & Maps</div>
+        <div class="ex-grid">
+          <div class="ex-btn" onclick="exportAssessReport()"><span class="ex-ico">📋</span><span class="ex-name">Site Report</span><span class="ex-desc">PDF / Print</span></div>
+          <div class="ex-btn" onclick="exportMapPNG()"><span class="ex-ico">🖼</span><span class="ex-name">Map PNG</span><span class="ex-desc">Screenshot</span></div>
+          <div class="ex-btn" onclick="exportLogCSV()"><span class="ex-ico">📓</span><span class="ex-name">Drone Log</span><span class="ex-desc">CSV</span></div>
+          <div class="ex-btn" onclick="exportGeoJSONZones()"><span class="ex-ico">📐</span><span class="ex-name">GeoJSON Zones</span><span class="ex-desc">Planning layers</span></div>
+        </div>
+      </div>
+
+    </div><!-- /sbody -->
+  </aside>
+
+  <!-- ══ MAP ══ -->
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <!-- NFZ violation banner -->
+    <div id="nfz-banner">🚫 <span id="nfz-banner-text">NFZ VIOLATION — Flight grid intersects restricted airspace</span></div>
+
+    <!-- Weather mini widget -->
+    <div class="wx-widget" id="wx-widget">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:22px" id="wx-ico">🌤</span>
+        <div>
+          <div class="wx-temp" id="wx-temp">—°C</div>
+          <div class="wx-cond" id="wx-cond">—</div>
+        </div>
+      </div>
+      <div class="wx-mini-grid">
+        <div class="wx-mi"><div class="wx-mv" id="wx-wind">—</div><div class="wx-ml">Wind m/s</div></div>
+        <div class="wx-mi"><div class="wx-mv" id="wx-vis">—</div><div class="wx-ml">Vis km</div></div>
+        <div class="wx-mi"><div class="wx-mv" id="wx-hum">—</div><div class="wx-ml">Humidity</div></div>
+        <div class="wx-mi"><div class="wx-mv" id="wx-cloud">—</div><div class="wx-ml">Cloud %</div></div>
+      </div>
+      <div class="wx-suit" id="wx-suit">—</div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <span class="sb-lbl">Cursor</span>
+      <span class="sb-val" id="sb-lat">—</span>
+      <span style="color:var(--txt4)">,</span>
+      <span class="sb-val" id="sb-lng">—</span>
+      <div class="sb-div"></div>
+      <span class="sb-lbl">Zoom</span>
+      <span class="sb-val" id="sb-zoom">—</span>
+      <div class="sb-div"></div>
+      <span class="sb-lbl">WPs</span>
+      <span class="sb-val" id="sb-wps">0</span>
+      <div class="sb-div"></div>
+      <span class="sb-lbl">Area</span>
+      <span class="sb-val" id="sb-area">—</span>
+      <div class="sb-div"></div>
+      <span id="sb-status">Ready</span>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="rpanel" id="rpanel">
+    <div class="rp-tabs">
+      <div class="rp-tab on" onclick="switchRT('mission')">Mission</div>
+      <div class="rp-tab" onclick="switchRT('telem')">Telemetry</div>
+      <div class="rp-tab" onclick="switchRT('layers')">Layers</div>
+      <div class="rp-tab" onclick="switchRT('calc')">Tools</div>
+    </div>
+    <div class="rp-body">
+      <!-- Mission tab -->
+      <div class="rp-panel on" id="rt-mission">
+        <div class="sh" style="padding-top:2px">Active Mission</div>
+        <div class="dc-grid">
+          <div class="dc"><div class="dc-val" id="rp-wps">0</div><div class="dc-lbl">Waypoints</div></div>
+          <div class="dc"><div class="dc-val" id="rp-lines">0</div><div class="dc-lbl">Strip Lines</div></div>
+          <div class="dc gn"><div class="dc-val" id="rp-area">—</div><div class="dc-lbl">Area (ha)</div></div>
+          <div class="dc ne"><div class="dc-val" id="rp-gsd">—</div><div class="dc-lbl">GSD cm/px</div></div>
+        </div>
+        <div class="dc-grid dc-grid3" style="margin-top:5px">
+          <div class="dc te"><div class="dc-val" id="rp-sw">—</div><div class="dc-lbl">Swath (m)</div></div>
+          <div class="dc am"><div class="dc-val" id="rp-imgs">—</div><div class="dc-lbl">Images</div></div>
+          <div class="dc"><div class="dc-val" id="rp-time">—</div><div class="dc-lbl">Est. Time</div></div>
+        </div>
+        <div class="sh" style="margin-top:12px">Aircraft</div>
+        <div id="rp-ac" style="font-size:10.5px;color:var(--txt3)">Select a platform in Flight Planner.</div>
+        <div class="sh" style="margin-top:10px">Sensor</div>
+        <div id="rp-sensor" style="font-size:10.5px;color:var(--txt3)">Select a sensor above.</div>
+        <div class="sh" style="margin-top:10px">Alerts</div>
+        <div id="rp-alerts" style="font-size:10px;color:var(--txt3)">No active alerts.</div>
+      </div>
+      <!-- Telemetry tab -->
+      <div class="rp-panel" id="rt-telem">
+        <div class="sh" style="padding-top:2px">Live Telemetry</div>
+        <div class="tgrid">
+          <div class="gauge"><div class="g-val" id="rp-alt">0</div><div class="g-unit">m</div><div class="g-lbl">Alt</div></div>
+          <div class="gauge"><div class="g-val" id="rp-spd">0</div><div class="g-unit">m/s</div><div class="g-lbl">Speed</div></div>
+          <div class="gauge hi"><div class="g-val" id="rp-bat">100</div><div class="g-unit">%</div><div class="g-lbl">Battery</div></div>
+        </div>
+        <canvas id="rp-chart" style="width:100%;display:block;margin-top:6px" height="100"></canvas>
+      </div>
+      <!-- Layers tab -->
+      <div class="rp-panel" id="rt-layers">
+        <div class="sh" style="padding-top:2px">Base Map</div>
+        <div id="rp-basemaps"></div>
+        <div class="sh" style="margin-top:8px">Overlays</div>
+        <div id="rp-overlays"></div>
+      </div>
+      <!-- Tools tab -->
+      <div class="rp-panel" id="rt-calc">
+        <div class="sh" style="padding-top:2px">GSD Calculator</div>
+        <div class="fg-row">
+          <div class="fg"><label>Alt (m)</label><input type="number" id="c-alt" value="120" oninput="liveGSD()"/></div>
+          <div class="fg"><label>Pixel (µm)</label><input type="number" id="c-px" value="4.4" step="0.1" oninput="liveGSD()"/></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>Focal (mm)</label><input type="number" id="c-f" value="35" oninput="liveGSD()"/></div>
+          <div class="fg"><label>Sensor W (mm)</label><input type="number" id="c-sw" value="35.9" step="0.1" oninput="liveGSD()"/></div>
+        </div>
+        <div class="dc-grid" style="margin-top:4px">
+          <div class="dc gn"><div class="dc-val" id="c-gsd">—</div><div class="dc-lbl">GSD cm/px</div></div>
+          <div class="dc te"><div class="dc-val" id="c-sw2">—</div><div class="dc-lbl">Swath (m)</div></div>
+        </div>
+        <div class="sh" style="margin-top:12px">DD ↔ DMS Converter</div>
+        <div class="fg"><label>Decimal Degrees</label><input type="text" id="cv-dd" placeholder="-1.2864, 36.8172" oninput="liveConvert()"/></div>
+        <div id="cv-out" style="font-size:10px;color:var(--txt2);background:var(--bg3);padding:7px;border-radius:var(--r);display:none"></div>
+        <div class="sh" style="margin-top:12px">Coverage Estimator</div>
+        <div class="fg-row">
+          <div class="fg"><label>Area (ha)</label><input type="number" id="cv-area" value="100" oninput="liveCov()"/></div>
+          <div class="fg"><label>Coverage/flight (ha)</label><input type="number" id="cv-cov" value="200" oninput="liveCov()"/></div>
+        </div>
+        <div class="dc-grid">
+          <div class="dc"><div class="dc-val" id="cv-fl">—</div><div class="dc-lbl">Flights</div></div>
+          <div class="dc am"><div class="dc-val" id="cv-bt">—</div><div class="dc-lbl">Batteries</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══════════════ COORDINATE MODAL ══════════════ -->
+<div class="modal-bg" id="modal-coord">
+  <div class="modal modal-lg">
+    <div class="modal-hd">
+      <span class="modal-title">📍 Coordinate Entry System</span>
+      <button class="modal-x" onclick="closeModal('coord')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ctabs">
+        <div class="ctab on" onclick="switchCTab('dd')">Decimal°</div>
+        <div class="ctab" onclick="switchCTab('dms')">DMS</div>
+        <div class="ctab" onclick="switchCTab('utm')">UTM</div>
+        <div class="ctab" onclick="switchCTab('bbox')">Bounding Box</div>
+        <div class="ctab" onclick="switchCTab('wkt')">WKT Polygon</div>
+        <div class="ctab" onclick="switchCTab('circle')">Circle AOI</div>
+      </div>
+      <!-- DD -->
+      <div class="cpanel on" id="cp-dd">
+        <div class="sh">Point-by-Point Decimal Degrees</div>
+        <div id="dd-pts">
+          <div class="fg-row" style="margin-bottom:5px">
+            <div class="fg"><label>Latitude</label><input type="number" class="ddlat" step="0.000001" placeholder="-1.286389"/></div>
+            <div class="fg"><label>Longitude</label><input type="number" class="ddlng" step="0.000001" placeholder="36.817223"/></div>
+          </div>
+        </div>
+        <div class="brow2">
+          <button class="btn ot sm" onclick="addDDPt()">➕ Add Point</button>
+          <button class="btn ne" onclick="buildDDPoly()">✓ Build Polygon</button>
+        </div>
+      </div>
+      <!-- DMS -->
+      <div class="cpanel" id="cp-dms">
+        <div class="sh">DMS Converter</div>
+        <div class="fg-row">
+          <div class="fg"><label>Latitude DMS</label><input type="text" id="dms-lat" placeholder="1°17'10.8&quot;S"/></div>
+          <div class="fg"><label>Longitude DMS</label><input type="text" id="dms-lng" placeholder="36°49'2&quot;E"/></div>
+        </div>
+        <button class="btn ne" onclick="convDMS()">↔ Convert</button>
+        <div id="dms-out" style="margin-top:8px;font-size:11px;color:var(--neon);font-family:monospace;display:none"></div>
+      </div>
+      <!-- UTM -->
+      <div class="cpanel" id="cp-utm">
+        <div class="sh">UTM → WGS84</div>
+        <div class="fg-row">
+          <div class="fg"><label>Zone</label><input type="number" id="utm-z" value="37"/></div>
+          <div class="fg"><label>Band</label><select id="utm-b"><option>N</option><option>S</option></select></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>Easting (m)</label><input type="number" id="utm-e" value="257000"/></div>
+          <div class="fg"><label>Northing (m)</label><input type="number" id="utm-n" value="9857800"/></div>
+        </div>
+        <button class="btn ne" onclick="convUTM()">↔ Convert to WGS84</button>
+        <div id="utm-out" style="margin-top:8px;font-size:11px;color:var(--neon);font-family:monospace;display:none"></div>
+      </div>
+      <!-- Bounding Box -->
+      <div class="cpanel" id="cp-bbox">
+        <div class="sh">Bounding Box</div>
+        <div class="fg-row">
+          <div class="fg"><label>North (max lat)</label><input type="number" id="bb-n" value="-1.25" step="0.0001"/></div>
+          <div class="fg"><label>South (min lat)</label><input type="number" id="bb-s" value="-1.35" step="0.0001"/></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>East (max lng)</label><input type="number" id="bb-e" value="36.88" step="0.0001"/></div>
+          <div class="fg"><label>West (min lng)</label><input type="number" id="bb-w" value="36.75" step="0.0001"/></div>
+        </div>
+        <button class="btn ne" onclick="buildBBox()">✓ Build Rectangle</button>
+      </div>
+      <!-- WKT -->
+      <div class="cpanel" id="cp-wkt">
+        <div class="sh">WKT Polygon Import</div>
+        <div class="fg"><label>Paste WKT</label><textarea id="wkt-in" style="height:90px;font-family:monospace;font-size:10px" placeholder="POLYGON((lng lat, lng lat, ...))"></textarea></div>
+        <button class="btn ne" onclick="importWKT()">↑ Import WKT</button>
+      </div>
+      <!-- Circle -->
+      <div class="cpanel" id="cp-circle">
+        <div class="sh">Circle AOI</div>
+        <div class="fg-row">
+          <div class="fg"><label>Centre Lat</label><input type="number" id="ci-lat" value="-1.286389" step="0.000001"/></div>
+          <div class="fg"><label>Centre Lng</label><input type="number" id="ci-lng" value="36.817223" step="0.000001"/></div>
+        </div>
+        <div class="fg"><label>Radius (m)</label><input type="number" id="ci-r" value="500" min="10"/></div>
+        <button class="btn ne" onclick="buildCircle()">✓ Build Circle AOI</button>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn ot" onclick="closeModal('coord')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Weather detail modal -->
+<div class="modal-bg" id="modal-weather">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title">🌤 Weather Intelligence</span>
+      <button class="modal-x" onclick="closeModal('weather')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Latitude</label><input type="number" id="wx-lat" value="-1.286" step="0.001"/>
+      </div>
+      <div class="fg">
+        <label>Longitude</label><input type="number" id="wx-lng" value="36.817" step="0.001"/>
+      </div>
+      <div class="fg">
+        <label>OpenWeatherMap API Key (optional — leave blank for demo)</label>
+        <input type="text" id="wx-key" placeholder="Paste your free API key for live data..."/>
+      </div>
+      <button class="btn ne fw" onclick="doFetchWeather()">🌤 Fetch Weather</button>
+      <div id="wx-detail" style="display:none;margin-top:12px"></div>
+    </div>
+    <div class="modal-ft"><button class="btn ot" onclick="closeModal('weather')">Close</button></div>
+  </div>
+</div>
+
+<!-- Alert bar, Toast container -->
+<div id="alert-bar"></div>
+<div id="toast-wrap"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

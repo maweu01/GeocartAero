@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "name": "NFZ_East_Africa",
+  "generator": "AeroGIS Pro v5",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "HKJK", "name": "JKIA — Jomo Kenyatta International Airport",
+        "icao": "HKJK", "type": "Class C CTR", "radius_km": 8,
+        "authority": "KCAA", "max_uav_alt_m": 0,
+        "notes": "Full CTR. UAV operations prohibited within 8km without ATC clearance."
+      },
+      "geometry": { "type": "Point", "coordinates": [36.9275, -1.3192] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "HKNW", "name": "Wilson Airport, Nairobi",
+        "icao": "HKNW", "type": "Class D Airspace", "radius_km": 5,
+        "authority": "KCAA", "max_uav_alt_m": 0,
+        "notes": "High-density general aviation. UAV prohibited."
+      },
+      "geometry": { "type": "Point", "coordinates": [36.8147, -1.3214] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "HKMO", "name": "Moi International Airport, Mombasa",
+        "icao": "HKMO", "type": "Class C CTR", "radius_km": 8,
+        "authority": "KCAA", "max_uav_alt_m": 0,
+        "notes": "Coastal CTR. UAV requires KCAA prior permission."
+      },
+      "geometry": { "type": "Point", "coordinates": [39.5944, -4.0348] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "HKKI", "name": "Kisumu International Airport",
+        "icao": "HKKI", "type": "Class D Airspace", "radius_km": 5,
+        "authority": "KCAA", "max_uav_alt_m": 0,
+        "notes": "Lake Victoria basin. KCAA approval required."
+      },
+      "geometry": { "type": "Point", "coordinates": [34.7289, -0.0862] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "NNP", "name": "Nairobi National Park",
+        "icao": null, "type": "Protected Wildlife Area", "radius_km": 4,
+        "authority": "KWS", "max_uav_alt_m": 0,
+        "notes": "Wildlife conservation zone. UAV prohibited without KWS permit."
+      },
+      "geometry": { "type": "Point", "coordinates": [36.8667, -1.3833] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "STATE_HOUSE", "name": "State House, Nairobi",
+        "icao": null, "type": "Critical Infrastructure — Prohibited", "radius_km": 3,
+        "authority": "Kenya Police / KCAA", "max_uav_alt_m": 0,
+        "notes": "Absolute prohibited zone. Violation is a criminal offence."
+      },
+      "geometry": { "type": "Point", "coordinates": [36.8163, -1.2770] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "HSNK", "name": "Kenyatta International Conference Centre",
+        "icao": null, "type": "Temporary Restricted Area", "radius_km": 2,
+        "authority": "KCAA", "max_uav_alt_m": 0,
+        "notes": "Event-based restriction. Verify NOTAMs before any UAV operation."
+      },
+      "geometry": { "type": "Point", "coordinates": [36.8175, -1.2864] }
+    }
+  ]
+}
